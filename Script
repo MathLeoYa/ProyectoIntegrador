@@ -350,3 +350,130 @@ CREATE INDEX fk_victimasmuerte_lugar1_idx ON pib.victimasmuerte (lugar_idLugar A
 SET SQL_MODE=@OLD_SQL_MODE;
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
 SET UNIQUE_CHECKS=@OLD_UNIQUE_CHECKS;
+
+--insersion de datos
+INSERT INTO armas (tipo_arma, arma)
+SELECT DISTINCT tipo_arma, arma
+FROM datapi
+WHERE tipo_arma IS NOT NULL
+ORDER BY arma;
+
+INSERT INTO pib.provincias (nombre_provincia, codigo_provincia)
+SELECT DISTINCT nombre_provincia, codigo_provincia
+FROM datapi
+WHERE codigo_provincia IS NOT NULL;
+
+INSERT INTO pib.cantones (nombre_canton, codigo_canton, provincias_provincia_id)
+SELECT DISTINCT d.nombre_canton, d.codigo_canton, p.provincia_id
+FROM datapi d
+JOIN provincias p ON d.nombre_provincia = p.nombre_provincia
+WHERE codigo_canton IS NOT NULL
+;
+
+INSERT INTO pib.parroquias (nombre_parroquia, codigo_parroquia, cantones_canton_id)
+SELECT DISTINCT d.nombre_parroquia, d.codigo_parroquia, c.canton_id
+FROM datapi d
+JOIN cantones C ON d.nombre_canton = c.nombre_canton
+WHERE codigo_parroquia IS NOT NULL
+;
+
+INSERT INTO pib.zonas (nombre_zona, nombre_subzona)
+SELECT DISTINCT d.nombre_zona, d.nombre_subzona
+FROM datapi d
+;
+
+INSERT INTO pib.distritos (nombre_distrito, codigo_distrito, zonas_zona_id)
+SELECT DISTINCT d.nombre_distrito, d.codigo_distrito, z.zona_id
+FROM datapi d
+JOIN zonas z ON d.nombre_zona = z.nombre_zona
+WHERE codigo_distrito IS NOT NULL
+;
+
+INSERT INTO pib.circuitos (nombre_circuito, codigo_circuito, distritos_distrito_id)
+SELECT DISTINCT d.nombre_distrito, d.codigo_distrito, di.distrito_id
+FROM datapi d
+JOIN distritos di ON d.nombre_distrito = di.nombre_distrito
+WHERE d.codigo_circuito IS NOT NULL
+;
+
+INSERT INTO pib.ubicacion (parroquias_parroquia_id, circuitos_circuito_id)
+SELECT DISTINCT p.parroquia_id, c.circuito_id
+FROM datapi d
+JOIN pib.parroquias p ON d.nombre_parroquia = p.nombre_parroquia
+JOIN pib.circuitos c ON d.nombre_circuito = c.nombre_circuito;
+
+INSERT INTO pib.tipolugar (tipo_lugar)
+SELECT DISTINCT d.tipo_lugar
+FROM datapi d
+WHERE d.tipo_lugar IS NOT NULL
+;
+
+INSERT INTO pib.lugar (lugar, tipoLugar_tipoLugar_id)
+SELECT DISTINCT d.lugar, t.tipoLugar_id
+FROM datapi d
+JOIN tipolugar t ON d.tipo_lugar = t.tipo_lugar
+WHERE d.tipo_lugar IS NOT NULL
+;
+
+INSERT INTO pib.detenciones (
+    presunta_subinfraccion,
+    flagrante_boleta,
+    tipo,
+    numero_detenciones,
+    presunta_infraccion,
+    presunta_flagrancia,
+    presunta_modalidad,
+    codigo_iccs,
+    armas_arma_id,
+    ubicacion_idUbicacion,
+    fechaDetencion,
+    horaDetencion,
+    edad,
+    autoIdentificacionEtnica,
+    statusMigratorio,
+    genero,
+    condicion,
+    movilizacion,
+    tipolugar_tipoLugar_id
+)
+SELECT DISTINCT
+    d.presunta_subinfraccion,
+    d.flagante_boleta,
+    d.tipo,
+    d.numero_detenciones,
+    d.presunta_infraccion,
+    d.presunta_flagrancia,
+    d.presunta_modalidad,
+    d.codigo_iccs,
+    a.arma_id,
+    u.idUbicacion,
+    d.fecha_detencion_aprehension,
+    d.hora_detencion_aprehension,
+    d.edad,
+    d.autoidentificacion_etnica,
+    d.estatus_migratorio,
+    d.genero,
+    d.condicion,
+    d.movilizacion,
+    t.tipoLugar_id
+FROM
+    datapi d
+JOIN pib.armas a ON d.arma = a.arma
+JOIN pib.parroquias p ON d.nombre_parroquia = p.nombre_parroquia
+join pib.ubicacion u ON u.parroquias_parroquia_id = p.parroquia_id
+join pib.tipolugar t ON t.tipo_lugar = d.tipo_lugar
+;
+
+INSERT INTO pib.persona (sexo, nacionalidad, estado_civil, nivel_de_instruccion, detenciones_detencion_id)
+SELECT distinct d.sexo, d.nacionalidad, d.estado_civil, d.nivel_de_instruccion, de.detencion_id
+FROM datapi d
+JOIN pib.detenciones de ON d.presunta_subinfraccion = de.presunta_subinfraccion
+;
+
+INSERT INTO pib.victimasmuerte (area_hecho, presunta_modalidad, tipo_muerte, tipo_arma, lugar_idlugar, zonas_zona_id, persona_idPersona)
+SELECT h.area_hecho, h.presunta_modalidad, h.tipo_muerte, h.tipo_arma, l.idlugar, a.zona_id, p.idPersona
+FROM homi h
+join pib.persona p ON h.sexo = p.sexo
+join pib.lugar l ON h.lugar = l.lugar
+join pib.zona z ON h.zona = z.zona
+;
